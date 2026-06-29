@@ -1,5 +1,6 @@
 #include "WebInterface.h"
 
+#include <Arduino.h>
 #include <ArduinoJson.h>
 #include <AsyncJson.h>
 #include <LittleFS.h>
@@ -23,12 +24,22 @@ void serializeConfig(const FanConfig& config, JsonObject target) {
 }
 }  // namespace
 
-WebInterface::WebInterface(FanControlService& service, uint16_t port)
-    : service(service), server(port) {}
+WebInterface::WebInterface(FanControlService& service, OtaUpdater& otaUpdater,
+                           const char* otaUsername, const char* otaPassword,
+                           uint16_t port)
+    : service(service),
+      otaUpdater(otaUpdater),
+      otaUsername(otaUsername),
+      otaPassword(otaPassword),
+      server(port) {}
 
 void WebInterface::begin() {
   registerRoutes();
   server.begin();
+}
+
+bool WebInterface::restartDue() const {
+  return restartAtMs != 0 && millis() >= restartAtMs;
 }
 
 void WebInterface::registerRoutes() {
@@ -45,6 +56,15 @@ void WebInterface::registerRoutes() {
       });
   configWriteHandler->setMethod(HTTP_POST);
   server.addHandler(configWriteHandler);
+
+  // Passwortgeschützter OTA-Upload (Firmware oder Dateisystem-Image).
+  server.on(
+      "/update", HTTP_POST,
+      [this](AsyncWebServerRequest* request) { handleOtaResult(request); },
+      [this](AsyncWebServerRequest* request, const String& filename,
+             size_t index, uint8_t* data, size_t length, bool isFinal) {
+        handleOtaUpload(request, filename, index, data, length, isFinal);
+      });
 
   // Statische Auslieferung des Webfrontends aus dem LittleFS.
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
@@ -116,4 +136,42 @@ void WebInterface::handlePostConfig(AsyncWebServerRequest* request,
   String payload;
   serializeJson(doc, payload);
   request->send(saved ? 200 : 500, MIME_JSON, payload);
+}
+
+bool WebInterface::isAuthenticated(AsyncWebServerRequest* request) const {
+  return request->authenticate(otaUsername, otaPassword);
+}
+
+void WebInterface::handleOtaUpload(AsyncWebServerRequest* request,
+                                   const String& filename, size_t index,
+                                   uint8_t* data, size_t length, bool isFinal) {
+  // Ohne gültige Authentifizierung werden keine Daten in den Flash geschrieben.
+  if (!isAuthenticated(request)) {
+    return;
+  }
+  // Dateiname entscheidet, ob Firmware oder Dateisystem-Image aktualisiert wird.
+  const bool filesystem =
+      filename.indexOf("littlefs") >= 0 || filename.indexOf("spiffs") >= 0;
+  otaUpdater.processChunk(data, length, index, isFinal, filesystem);
+}
+
+void WebInterface::handleOtaResult(AsyncWebServerRequest* request) {
+  if (!isAuthenticated(request)) {
+    return request->requestAuthentication();
+  }
+
+  const bool ok = otaUpdater.isFinished() && !otaUpdater.hasError();
+  String body = ok ? String("{\"ok\":true}")
+                   : String("{\"ok\":false,\"error\":\"") +
+                         otaUpdater.errorMessage() + "\"}";
+
+  AsyncWebServerResponse* response =
+      request->beginResponse(ok ? 200 : 500, MIME_JSON, body);
+  response->addHeader("Connection", "close");
+  request->send(response);
+
+  // Neustart erst nach Auslieferung der Antwort (im loop() ausgewertet).
+  if (ok) {
+    restartAtMs = millis() + 1500;
+  }
 }

@@ -1,4 +1,4 @@
-#include "LedcFanDriver.h"
+#include "FanDriver.h"
 
 #include <Arduino.h>
 
@@ -7,14 +7,14 @@ namespace {
 // Nur eine Lüfter-Instanz ist zulässig (siehe Header).
 volatile uint32_t tachPulseCount = 0;
 
-void IRAM_ATTR onTachPulse() { tachPulseCount++; }
+void IRAM_ATTR onTachPulse() { tachPulseCount = tachPulseCount + 1; }
 
 // Mindestabstand zwischen zwei Drehzahlmessungen (ms).
 constexpr uint32_t RPM_SAMPLE_INTERVAL_MS = 1000;
 constexpr uint32_t MILLIS_PER_MINUTE = 60000;
 }  // namespace
 
-LedcFanDriver::LedcFanDriver(uint8_t pwmPin, uint8_t tachPin,
+FanDriver::FanDriver(uint8_t pwmPin, uint8_t tachPin,
                              uint32_t pwmFrequencyHz, uint8_t resolutionBits,
                              uint8_t tachPulsesPerRev)
     : pwmPin(pwmPin),
@@ -23,11 +23,11 @@ LedcFanDriver::LedcFanDriver(uint8_t pwmPin, uint8_t tachPin,
       resolutionBits(resolutionBits),
       tachPulsesPerRev(tachPulsesPerRev) {}
 
-uint16_t LedcFanDriver::maxDutyValue() const {
+uint16_t FanDriver::maxDutyValue() const {
   return static_cast<uint16_t>((1u << resolutionBits) - 1u);
 }
 
-void LedcFanDriver::begin() {
+void FanDriver::begin() {
   ledcAttach(pwmPin, pwmFrequencyHz, resolutionBits);
   setDutyPercent(0);
 
@@ -36,18 +36,18 @@ void LedcFanDriver::begin() {
   lastSampleMs = millis();
 }
 
-void LedcFanDriver::setDutyPercent(uint8_t percent) {
+void FanDriver::setDutyPercent(uint8_t percent) {
   currentDutyPercent = percent > 100 ? 100 : percent;
   const uint32_t duty =
       (static_cast<uint32_t>(currentDutyPercent) * maxDutyValue()) / 100u;
   ledcWrite(pwmPin, duty);
 }
 
-uint8_t LedcFanDriver::getDutyPercent() const { return currentDutyPercent; }
+uint8_t FanDriver::getDutyPercent() const { return currentDutyPercent; }
 
-uint16_t LedcFanDriver::getRpm() const { return currentRpm; }
+uint16_t FanDriver::getRpm() const { return currentRpm; }
 
-void LedcFanDriver::update() {
+void FanDriver::update() {
   const uint32_t now = millis();
   const uint32_t elapsedMs = now - lastSampleMs;
   if (elapsedMs < RPM_SAMPLE_INTERVAL_MS) {

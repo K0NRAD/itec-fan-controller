@@ -15,7 +15,6 @@ class Ds18b20Sensor : public ITemperatureSensor {
   bool begin() override;
   void update() override;
   bool readCelsius(float& outCelsius) const override;
-  bool isConnected() const override;
 
  private:
   static constexpr uint8_t RESOLUTION_BITS = 12;

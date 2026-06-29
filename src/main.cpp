@@ -5,8 +5,9 @@
 #include "BoardPins.h"
 #include "Ds18b20Sensor.h"
 #include "FanControlService.h"
-#include "LedcFanDriver.h"
+#include "FanDriver.h"
 #include "NvsConfigStore.h"
+#include "OtaUpdater.h"
 #include "WebInterface.h"
 
 // Optionale WLAN-Zugangsdaten (include/secrets.h, per .gitignore ausgeschlossen).
@@ -20,6 +21,14 @@
 #define WIFI_PASSWORD ""
 #endif
 
+// Zugangsdaten für das passwortgeschützte Web-OTA (über secrets.h überschreibbar).
+#ifndef OTA_USERNAME
+#define OTA_USERNAME "admin"
+#endif
+#ifndef OTA_PASSWORD
+#define OTA_PASSWORD "fancontrol-ota"
+#endif
+
 namespace {
 constexpr const char* ACCESS_POINT_SSID = "itec-fan-controller";
 constexpr const char* ACCESS_POINT_PASSWORD = "fancontrol";
@@ -28,13 +37,14 @@ constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS = 15000;
 // Komposition (Dependency Injection) der Module – einzige Stelle mit konkreten
 // Implementierungen.
 NvsConfigStore configStore;
-LedcFanDriver fanDriver(board::FAN_PWM_PIN, board::FAN_TACH_PIN,
-                        board::FAN_PWM_FREQUENCY_HZ,
-                        board::FAN_PWM_RESOLUTION_BITS,
-                        board::FAN_TACH_PULSES_PER_REV);
+FanDriver fanDriver(board::FAN_PWM_PIN, board::FAN_TACH_PIN,
+                    board::FAN_PWM_FREQUENCY_HZ, board::FAN_PWM_RESOLUTION_BITS,
+                    board::FAN_TACH_PULSES_PER_REV);
 Ds18b20Sensor temperatureSensor(board::TEMP_SENSOR_PIN);
 FanControlService fanControlService(fanDriver, temperatureSensor, configStore);
-WebInterface webInterface(fanControlService);
+OtaUpdater otaUpdater;
+WebInterface webInterface(fanControlService, otaUpdater, OTA_USERNAME,
+                          OTA_PASSWORD);
 
 // Verbindet sich als Station; bei Fehlschlag wird ein Access Point gestartet,
 // damit das Webinterface stets erreichbar ist.
@@ -80,5 +90,13 @@ void setup() {
 
 void loop() {
   fanControlService.update();
+
+  // Nach erfolgreichem OTA-Update neu starten (sobald die Antwort raus ist).
+  if (webInterface.restartDue()) {
+    Serial.println("OTA abgeschlossen, Neustart ...");
+    delay(100);
+    ESP.restart();
+  }
+
   delay(10);
 }

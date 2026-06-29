@@ -15,7 +15,4 @@ class ITemperatureSensor {
   // Letzter gültiger Messwert. Liefert false, wenn (noch) kein gültiger Wert
   // vorliegt bzw. der Sensor getrennt ist.
   virtual bool readCelsius(float& outCelsius) const = 0;
-
-  // true, wenn aktuell ein Sensor am Bus erkannt wird.
-  virtual bool isConnected() const = 0;
 };

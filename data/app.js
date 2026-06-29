@@ -108,9 +108,65 @@ async function pollStatus() {
   }
 }
 
+// --- OTA-Firmware-Update ---------------------------------------------------
+
+const otaForm = document.getElementById("ota-form");
+const otaFile = document.getElementById("ota-file");
+const otaPass = document.getElementById("ota-pass");
+const otaProgress = document.getElementById("ota-progress");
+const otaFeedback = document.getElementById("ota-feedback");
+
+function setOtaFeedback(message, isError) {
+  otaFeedback.textContent = message;
+  otaFeedback.className = "feedback " + (isError ? "err" : "ok");
+}
+
+function uploadFirmware(event) {
+  event.preventDefault();
+  const file = otaFile.files[0];
+  if (!file) {
+    setOtaFeedback("Bitte eine .bin-Datei auswählen.", true);
+    return;
+  }
+
+  const request = new XMLHttpRequest();
+  request.open("POST", "/update");
+  // Basic-Auth (Benutzer "admin"); das Passwort stammt aus dem Eingabefeld.
+  request.setRequestHeader("Authorization", "Basic " + btoa("admin:" + otaPass.value));
+
+  request.upload.onprogress = (progressEvent) => {
+    if (progressEvent.lengthComputable) {
+      const percent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+      otaProgress.value = percent;
+      setOtaFeedback("Upload " + percent + " %", false);
+    }
+  };
+
+  request.onload = () => {
+    if (request.status === 200) {
+      setOtaFeedback("Update erfolgreich – Gerät startet neu ...", false);
+    } else if (request.status === 401) {
+      setOtaFeedback("Falsches OTA-Passwort.", true);
+    } else {
+      setOtaFeedback("Update fehlgeschlagen.", true);
+    }
+  };
+
+  // Beim Neustart bricht die Verbindung ab – das ist nach Erfolg normal.
+  request.onerror = () => {
+    setOtaFeedback("Verbindung verloren (vermutlich Neustart nach Update).", false);
+  };
+
+  const formData = new FormData();
+  formData.append("firmware", file, file.name);
+  setOtaFeedback("Upload startet ...", false);
+  request.send(formData);
+}
+
 bindSliderOutputs();
 tempEnabled.addEventListener("change", updateTempSettingsVisibility);
 form.addEventListener("submit", saveConfig);
+otaForm.addEventListener("submit", uploadFirmware);
 loadConfig();
 pollStatus();
 setInterval(pollStatus, STATUS_POLL_INTERVAL_MS);

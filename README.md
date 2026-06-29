@@ -33,12 +33,40 @@ pio device monitor      # Serielle Ausgabe
 Der GitHub-Release-Workflow veröffentlicht neben den Einzeldateien
 (`firmware-<version>.bin`, `bootloader.bin`, `partitions.bin`, `littlefs.bin`)
 auch ein kombiniertes **`factory-<version>.bin`** (Bootloader + Partitionstabelle
-+ OTA-Data + App + LittleFS in einer Datei). Ein leeres Board lässt sich damit in
-einem Schritt komplett bespielen:
++ OTA-Data + App + LittleFS in einer Datei).
+
+### Aus einem Release flashen
+
+Voraussetzung: `pip install esptool` (oder `python -m esptool ...`). Port anpassen
+(macOS z. B. `/dev/cu.usbserial-XXXX`, Linux `/dev/ttyUSB0`, Windows `COMx`); ohne
+`-p` versucht esptool die Auto-Erkennung. Optional `--baud 921600` für mehr Tempo.
+
+**Weg 1 (empfohlen): Factory-Image – eine Datei, ein Befehl.** Ideal für ein leeres
+Board und für Web-Flasher (z. B. ESP Web Tools), dort bei Offset `0x0` laden:
 
 ```bash
-esptool --chip esp32 write_flash 0x0 factory-<version>.bin
+esptool --chip esp32 -p /dev/cu.usbserial-14120 write_flash 0x0 factory-<version>.bin
 ```
+
+**Weg 2: Einzeldateien an ihre Offsets** (z. B. um nur Teile zu aktualisieren):
+
+```bash
+esptool --chip esp32 -p /dev/cu.usbserial-14120 write_flash \
+  0x1000   bootloader.bin \
+  0x8000   partitions.bin \
+  0x10000  firmware-<version>.bin \
+  0x290000 littlefs.bin
+```
+
+- Nur Anwendung aktualisieren: `... write_flash 0x10000 firmware-<version>.bin`
+- Nur Webinterface aktualisieren: `... write_flash 0x290000 littlefs.bin`
+
+Hinweise:
+
+- `firmware-<version>.elf` ist **nicht** zum Flashen, sondern die Debug-/Symboldatei
+  (z. B. für Stacktrace-Decoding).
+- `boot_app0.bin` liegt dem Release nicht bei. Bei Weg 2 unkritisch: Bei leerem
+  OTA-Data bootet der Bootloader ohnehin App0. Im Factory-Image ist es enthalten.
 
 ### Factory-Image lokal erzeugen
 
@@ -68,6 +96,36 @@ python -m esptool --chip esp32 merge_bin -o factory.bin \
 python -m esptool --chip esp32 write_flash 0x0 factory.bin
 ```
 
+## OTA-Update (über das Webinterface)
+
+Nach dem ersten Flashen lässt sich die Firmware **drahtlos** über die Weboberfläche
+aktualisieren – kein USB-Kabel mehr nötig. Das Default-Partitionslayout besitzt zwei
+App-Slots; das Update wird in den inaktiven Slot geschrieben und nach erfolgreicher
+Prüfung per Neustart aktiviert.
+
+Ablauf:
+
+1. In der Weboberfläche zur Karte **„Firmware-Update (OTA)"** scrollen.
+2. Datei wählen:
+   - `firmware-<version>.bin` → aktualisiert die **Anwendung**
+   - `littlefs.bin` → aktualisiert das **Webinterface** (Dateisystem)
+   - Die Erkennung erfolgt über den Dateinamen (Name mit `littlefs`/`spiffs` = Dateisystem).
+3. **OTA-Passwort** eingeben und „Hochladen & flashen" klicken.
+4. Nach erfolgreichem Upload startet das Gerät automatisch neu.
+
+Zugangsdaten (Basic-Auth): Standard **`admin` / `fancontrol-ota`**. Über
+`include/secrets.h` (`OTA_USERNAME` / `OTA_PASSWORD`) überschreibbar.
+
+Per Kommandozeile (z. B. im AP-Modus unter `192.168.4.1`):
+
+```bash
+curl -u admin:fancontrol-ota -F "firmware=@firmware-<version>.bin" http://192.168.4.1/update
+```
+
+> Sicherheitshinweis: Die Authentifizierung erfolgt per HTTP Basic-Auth über eine
+> unverschlüsselte Verbindung. Das ist für ein lokales Netz üblich; das OTA-Passwort
+> sollte dennoch geändert werden und das Gerät nicht offen erreichbar sein.
+
 ## Architektur
 
 Die Firmware folgt den SOLID-Prinzipien. Jede Verantwortlichkeit liegt in einer
@@ -80,4 +138,5 @@ eigenen Bibliothek unter `lib/`:
 | `FanDriver`          | PWM-Ausgabe + Tacho-Messung (`IFanDriver` + LEDC-Impl.)  |
 | `SpeedStrategy`      | Strategy-Pattern: feste Drehzahl vs. Temperaturkurve     |
 | `FanControlService`  | Orchestrierung von Sensor, Strategie und Treiber         |
-| `WebInterface`       | HTTP-/REST-API und Auslieferung des Webfrontends         |
+| `WebInterface`       | HTTP-/REST-API, Webfrontend und OTA-Upload-Route         |
+| `OtaUpdater`         | OTA-Update (Firmware/Dateisystem) über die Update-API    |

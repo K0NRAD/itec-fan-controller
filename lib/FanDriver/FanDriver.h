@@ -8,10 +8,10 @@
 //
 // Hinweis: Aufgrund der Interrupt-Service-Routine ist nur EINE Instanz zulässig
 // (ein Lüfter). Das entspricht der Anforderung (YAGNI).
-class LedcFanDriver : public IFanDriver {
+class FanDriver : public IFanDriver {
  public:
-  LedcFanDriver(uint8_t pwmPin, uint8_t tachPin, uint32_t pwmFrequencyHz,
-                uint8_t resolutionBits, uint8_t tachPulsesPerRev);
+  FanDriver(uint8_t pwmPin, uint8_t tachPin, uint32_t pwmFrequencyHz,
+            uint8_t resolutionBits, uint8_t tachPulsesPerRev);
 
   void begin() override;
   void update() override;

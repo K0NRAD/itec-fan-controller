@@ -54,5 +54,3 @@ bool Ds18b20Sensor::readCelsius(float& outCelsius) const {
   outCelsius = lastValidCelsius;
   return true;
 }
-
-bool Ds18b20Sensor::isConnected() const { return deviceConnected; }

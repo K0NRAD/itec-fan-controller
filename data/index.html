@@ -59,6 +59,22 @@
         <button type="submit">Speichern</button>
         <p id="save-feedback" class="feedback" role="status"></p>
       </form>
+
+      <section class="card">
+        <h2>Firmware-Update (OTA)</h2>
+        <form id="ota-form">
+          <label for="ota-file">Firmware- oder Dateisystem-Image (.bin)</label>
+          <input type="file" id="ota-file" accept=".bin" />
+
+          <label for="ota-pass">OTA-Passwort</label>
+          <input type="password" id="ota-pass" autocomplete="off" />
+
+          <progress id="ota-progress" max="100" value="0"></progress>
+
+          <button type="submit">Hochladen &amp; flashen</button>
+          <p id="ota-feedback" class="feedback" role="status"></p>
+        </form>
+      </section>
     </main>
 
     <script src="/app.js"></script>
