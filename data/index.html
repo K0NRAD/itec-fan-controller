@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lüftersteuerung</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Lüftersteuerung</h1>
+
+      <section class="card" id="status-card">
+        <h2>Status</h2>
+        <div class="status-grid">
+          <div><span class="label">Drehzahl</span><span id="status-rpm">–</span> U/min</div>
+          <div><span class="label">Tastverhältnis</span><span id="status-duty">–</span> %</div>
+          <div><span class="label">Temperatur</span><span id="status-temp">–</span></div>
+        </div>
+      </section>
+
+      <form class="card" id="config-form">
+        <h2>Einstellungen</h2>
+
+        <label for="baseSpeedPercent">
+          Basis-Drehzahl: <output id="baseSpeedOut"></output> %
+        </label>
+        <input type="range" id="baseSpeedPercent" name="baseSpeedPercent"
+               min="0" max="100" step="1" />
+
+        <fieldset class="toggle">
+          <label class="switch">
+            <input type="checkbox" id="temperatureControlEnabled"
+                   name="temperatureControlEnabled" />
+            Temperaturregelung aktivieren
+          </label>
+        </fieldset>
+
+        <div id="temp-settings" class="temp-settings">
+          <label for="thresholdTempC">
+            Schwelltemperatur: <output id="thresholdOut"></output> °C
+          </label>
+          <input type="range" id="thresholdTempC" name="thresholdTempC"
+                 min="0" max="100" step="0.5" />
+
+          <label for="maxTempC">
+            Temperatur für Maximaldrehzahl: <output id="maxTempOut"></output> °C
+          </label>
+          <input type="range" id="maxTempC" name="maxTempC"
+                 min="0" max="120" step="0.5" />
+
+          <label for="maxSpeedPercent">
+            Maximaldrehzahl: <output id="maxSpeedOut"></output> %
+          </label>
+          <input type="range" id="maxSpeedPercent" name="maxSpeedPercent"
+                 min="0" max="100" step="1" />
+        </div>
+
+        <button type="submit">Speichern</button>
+        <p id="save-feedback" class="feedback" role="status"></p>
+      </form>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
