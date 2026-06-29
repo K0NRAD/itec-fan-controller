@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Benötigt zum Erstellen von Tags und Releases.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (volle Historie für Versionsermittlung)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Nächste Version ermitteln (Conventional Commits)
+        id: version
+        uses: thenativeweb/get-next-version@main
+
+      - name: Ergebnis ausgeben
+        run: |
+          echo "hasNextVersion=${{ steps.version.outputs.hasNextVersion }}"
+          echo "version=${{ steps.version.outputs.version }}"
+
+      - name: Python einrichten
+        if: steps.version.outputs.hasNextVersion == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: PlatformIO installieren
+        if: steps.version.outputs.hasNextVersion == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Cache (PlatformIO-Pakete)
+        if: steps.version.outputs.hasNextVersion == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+
+      - name: Firmware bauen (ESP32 DevKitC v4)
+        if: steps.version.outputs.hasNextVersion == 'true'
+        run: pio run -e esp32devkitc-v4
+
+      - name: Dateisystem-Image (LittleFS) bauen
+        if: steps.version.outputs.hasNextVersion == 'true'
+        run: pio run -e esp32devkitc-v4 -t buildfs
+
+      - name: Artefakte sammeln
+        if: steps.version.outputs.hasNextVersion == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          BUILD_DIR=.pio/build/esp32devkitc-v4
+          mkdir -p dist
+          cp "$BUILD_DIR/firmware.bin"   "dist/firmware-${VERSION}.bin"
+          cp "$BUILD_DIR/firmware.elf"   "dist/firmware-${VERSION}.elf"
+          cp "$BUILD_DIR/bootloader.bin" "dist/bootloader.bin"
+          cp "$BUILD_DIR/partitions.bin" "dist/partitions.bin"
+          cp "$BUILD_DIR/littlefs.bin"   "dist/littlefs.bin"
+
+      - name: Tag erstellen und pushen
+        if: steps.version.outputs.hasNextVersion == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: GitHub-Release veröffentlichen
+        if: steps.version.outputs.hasNextVersion == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
