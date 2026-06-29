@@ -40,6 +40,34 @@ einem Schritt komplett bespielen:
 esptool --chip esp32 write_flash 0x0 factory-<version>.bin
 ```
 
+### Factory-Image lokal erzeugen
+
+Das gleiche Image kann auch lokal gebaut werden (Offsets: klassischer ESP32,
+4-MB-Default-Partition):
+
+```bash
+pip install "esptool==4.8.1"
+
+# Firmware und Dateisystem bauen
+pio run -e esp32devkitc-v4
+pio run -e esp32devkitc-v4 -t buildfs
+
+# Pfade ermitteln und Image mergen
+BUILD=.pio/build/esp32devkitc-v4
+BOOT_APP0=$(find ~/.platformio/packages -name boot_app0.bin | head -n 1)
+
+python -m esptool --chip esp32 merge_bin -o factory.bin \
+  --flash_mode dio --flash_freq 40m --flash_size 4MB \
+  0x1000   "$BUILD/bootloader.bin" \
+  0x8000   "$BUILD/partitions.bin" \
+  0xe000   "$BOOT_APP0" \
+  0x10000  "$BUILD/firmware.bin" \
+  0x290000 "$BUILD/littlefs.bin"
+
+# Auf ein leeres Board flashen
+python -m esptool --chip esp32 write_flash 0x0 factory.bin
+```
+
 ## Architektur
 
 Die Firmware folgt den SOLID-Prinzipien. Jede Verantwortlichkeit liegt in einer
