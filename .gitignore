@@ -1,0 +1,23 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Build-Artefakte
+*.bin
+*.elf
+*.map
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Lokale Tool-/Editor-Einstellungen
+.claude/
+
+# Lokale Geheimnisse / WiFi-Zugangsdaten
+include/secrets.h
