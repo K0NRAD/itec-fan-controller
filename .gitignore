@@ -18,6 +18,7 @@
 
 # Lokale Tool-/Editor-Einstellungen
 .claude/
+app-prompt.md
 
 # Lokale Geheimnisse / WiFi-Zugangsdaten
 include/secrets.h

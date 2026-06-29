@@ -69,6 +69,32 @@ jobs:
           cp "$BUILD_DIR/partitions.bin" "dist/partitions.bin"
           cp "$BUILD_DIR/littlefs.bin"   "dist/littlefs.bin"
 
+      - name: Kombiniertes Factory-Image erzeugen
+        if: steps.version.outputs.hasNextVersion == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # esptool gepinnt fuer stabile merge_bin-Syntax (unabhaengig von der
+          # mit PlatformIO gebundelten Version).
+          pip install "esptool==4.8.1"
+
+          BUILD_DIR=.pio/build/esp32devkitc-v4
+          BOOT_APP0=$(find ~/.platformio/packages -name boot_app0.bin | head -n 1)
+          if [ -z "$BOOT_APP0" ]; then
+            echo "boot_app0.bin nicht gefunden"; exit 1
+          fi
+
+          # Ein flashbares Gesamtimage (Bootloader + Partitionstabelle + OTA-Data
+          # + App + LittleFS). Offsets: klassischer ESP32, 4-MB-Default-Partition.
+          python -m esptool --chip esp32 merge_bin \
+            -o "dist/factory-${VERSION}.bin" \
+            --flash_mode dio --flash_freq 40m --flash_size 4MB \
+            0x1000   "$BUILD_DIR/bootloader.bin" \
+            0x8000   "$BUILD_DIR/partitions.bin" \
+            0xe000   "$BOOT_APP0" \
+            0x10000  "$BUILD_DIR/firmware.bin" \
+            0x290000 "$BUILD_DIR/littlefs.bin"
+
       - name: Tag erstellen und pushen
         if: steps.version.outputs.hasNextVersion == 'true'
         env:

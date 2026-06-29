@@ -28,6 +28,18 @@ pio run -t uploadfs     # Webinterface (data/) ins LittleFS flashen
 pio device monitor      # Serielle Ausgabe
 ```
 
+## Release / Factory-Image
+
+Der GitHub-Release-Workflow veröffentlicht neben den Einzeldateien
+(`firmware-<version>.bin`, `bootloader.bin`, `partitions.bin`, `littlefs.bin`)
+auch ein kombiniertes **`factory-<version>.bin`** (Bootloader + Partitionstabelle
++ OTA-Data + App + LittleFS in einer Datei). Ein leeres Board lässt sich damit in
+einem Schritt komplett bespielen:
+
+```bash
+esptool --chip esp32 write_flash 0x0 factory-<version>.bin
+```
+
 ## Architektur
 
 Die Firmware folgt den SOLID-Prinzipien. Jede Verantwortlichkeit liegt in einer
