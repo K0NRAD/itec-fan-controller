@@ -135,7 +135,7 @@ eigenen Bibliothek unter `lib/`:
 | -------------------- | -------------------------------------------------------- |
 | `ConfigStore`        | Persistenz der Einstellungen (Repository-Pattern, NVS)   |
 | `TemperatureSensor`  | Abstraktion (`ITemperatureSensor`) + DS18B20-Impl.       |
-| `FanDriver`          | PWM-Ausgabe + Tacho-Messung (`IFanDriver` + LEDC-Impl.)  |
+| `FanDriver`          | PWM-Ausgabe zur Drehzahlsteuerung (`IFanDriver` + LEDC)   |
 | `SpeedStrategy`      | Strategy-Pattern: feste Drehzahl vs. Temperaturkurve     |
 | `FanControlService`  | Orchestrierung von Sensor, Strategie und Treiber         |
 | `WebInterface`       | HTTP-/REST-API, Webfrontend und OTA-Upload-Route         |

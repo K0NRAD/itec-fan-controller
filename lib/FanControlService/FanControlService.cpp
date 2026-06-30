@@ -29,7 +29,6 @@ void FanControlService::update() {
   if (config.temperatureControlEnabled) {
     temperatureSensor.update();
   }
-  fanDriver.update();
 
   const uint32_t now = millis();
   if (now - lastControlMs >= CONTROL_INTERVAL_MS) {
@@ -51,13 +50,19 @@ bool FanControlService::updateConfig(const FanConfig& newConfig) {
 
   const bool saved = configRepository.save(config);
   applyControl();
+
+  Serial.printf(
+      "Config: base=%u%% tempCtrl=%d threshold=%.1f maxTemp=%.1f maxSpeed=%u%% "
+      "-> duty=%u%%\n",
+      config.baseSpeedPercent, config.temperatureControlEnabled,
+      config.thresholdTempC, config.maxTempC, config.maxSpeedPercent,
+      fanDriver.getDutyPercent());
   return saved;
 }
 
 FanStatus FanControlService::getStatus() const {
   FanStatus status;
   status.dutyPercent = fanDriver.getDutyPercent();
-  status.rpm = fanDriver.getRpm();
   status.sensorEnabled = config.temperatureControlEnabled;
 
   if (config.temperatureControlEnabled) {

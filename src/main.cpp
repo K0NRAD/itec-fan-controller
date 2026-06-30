@@ -37,9 +37,8 @@ constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS = 15000;
 // Komposition (Dependency Injection) der Module – einzige Stelle mit konkreten
 // Implementierungen.
 NvsConfigStore configStore;
-FanDriver fanDriver(board::FAN_PWM_PIN, board::FAN_TACH_PIN,
-                    board::FAN_PWM_FREQUENCY_HZ, board::FAN_PWM_RESOLUTION_BITS,
-                    board::FAN_TACH_PULSES_PER_REV);
+FanDriver fanDriver(board::FAN_PWM_PIN, board::FAN_PWM_FREQUENCY_HZ,
+                    board::FAN_PWM_RESOLUTION_BITS);
 Ds18b20Sensor temperatureSensor(board::TEMP_SENSOR_PIN);
 FanControlService fanControlService(fanDriver, temperatureSensor, configStore);
 OtaUpdater otaUpdater;

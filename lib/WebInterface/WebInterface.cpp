@@ -88,7 +88,6 @@ void WebInterface::handleGetStatus(AsyncWebServerRequest* request) const {
 
   JsonDocument doc;
   doc["dutyPercent"] = status.dutyPercent;
-  doc["rpm"] = status.rpm;
   doc["sensorEnabled"] = status.sensorEnabled;
   doc["temperatureValid"] = status.temperatureValid;
   if (status.temperatureValid) {
@@ -109,20 +108,23 @@ void WebInterface::handlePostConfig(AsyncWebServerRequest* request,
   const JsonObjectConst input = body.as<JsonObjectConst>();
 
   // Bestehende Werte übernehmen und nur übergebene Felder überschreiben.
+  // Felder werden über ihre Präsenz erkannt (isNull) und per as<T>() koerziert;
+  // is<T>() ist für JSON-Zahlen unzuverlässig (is<float>() = false bei Ganzzahl,
+  // is<uint8_t>() durch unsigned-char-Sonderbehandlung).
   FanConfig updated = service.getConfig();
-  if (input[KEY_BASE_SPEED].is<uint8_t>()) {
+  if (!input[KEY_BASE_SPEED].isNull()) {
     updated.baseSpeedPercent = input[KEY_BASE_SPEED].as<uint8_t>();
   }
-  if (input[KEY_TEMP_ENABLED].is<bool>()) {
+  if (!input[KEY_TEMP_ENABLED].isNull()) {
     updated.temperatureControlEnabled = input[KEY_TEMP_ENABLED].as<bool>();
   }
-  if (input[KEY_THRESHOLD].is<float>()) {
+  if (!input[KEY_THRESHOLD].isNull()) {
     updated.thresholdTempC = input[KEY_THRESHOLD].as<float>();
   }
-  if (input[KEY_MAX_TEMP].is<float>()) {
+  if (!input[KEY_MAX_TEMP].isNull()) {
     updated.maxTempC = input[KEY_MAX_TEMP].as<float>();
   }
-  if (input[KEY_MAX_SPEED].is<uint8_t>()) {
+  if (!input[KEY_MAX_SPEED].isNull()) {
     updated.maxSpeedPercent = input[KEY_MAX_SPEED].as<uint8_t>();
   }
 

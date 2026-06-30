@@ -5,8 +5,14 @@
 | Funktion              | ESP32-GPIO | Hinweis                                   |
 | --------------------- | ---------- | ----------------------------------------- |
 | PWM-Steuersignal      | GPIO 25    | LEDC-Ausgang, 25 kHz, 3,3 V               |
-| Tacho / RPM-Eingang   | GPIO 26    | Interrupt-Eingang, Pull-up gegen 3,3 V    |
+| Tacho / RPM-Eingang   | GPIO 26    | derzeit nicht von der Firmware genutzt     |
 | DS18B20 Daten (1-Wire)| GPIO 4     | Pull-up 4,7 kΩ gegen 3,3 V                |
+
+> Hinweis: Die Drehzahlmessung (Tacho, Pin 3 grün) ist in der Firmware **entfernt**.
+> Grund: starke kapazitive Einkopplung des 25-kHz-PWM-Signals in die Tacho-Leitung
+> führte ohne RC-Tiefpass zu unbrauchbaren Werten. Pin 3 kann offen bleiben. Zur
+> Reaktivierung wären ein definierter Pull-up (z. B. 4,7 kΩ gegen 3,3 V) plus ein
+> RC-Tiefpass (z. B. 100 nF gegen GND) nötig.
 
 ## Komplettes Schema
 

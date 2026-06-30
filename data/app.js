@@ -95,7 +95,6 @@ async function pollStatus() {
     const response = await fetch("/api/status");
     if (!response.ok) return;
     const status = await response.json();
-    document.getElementById("status-rpm").textContent = status.rpm;
     document.getElementById("status-duty").textContent = status.dutyPercent;
     document.getElementById("status-temp").textContent =
       status.temperatureValid
